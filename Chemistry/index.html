@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#07131e">
+  <meta name="description" content="Chemistry Explorer — game khám phá và mô phỏng hóa học 3D dành cho học sinh THPT.">
+  <title>Chemistry Explorer — Nhà thám hiểm hóa học</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js"}}
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07131e;
+      --bg-soft: #0a1925;
+      --panel: rgba(15, 33, 47, .88);
+      --panel-strong: #102333;
+      --line: rgba(177, 217, 226, .12);
+      --text: #edf6f5;
+      --muted: #91a8b1;
+      --teal: #67e0ce;
+      --teal-deep: #24aa9e;
+      --gold: #f3c778;
+      --coral: #ff927d;
+      --blue: #8ab8ff;
+      --radius: 22px;
+      --shadow: 0 24px 80px rgba(0, 0, 0, .28);
+      font-family: "Manrope", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+      background:
+        radial-gradient(ellipse at 82% 13%, rgba(32, 132, 135, .12), transparent 33rem),
+        radial-gradient(ellipse at 8% 82%, rgba(31, 83, 120, .15), transparent 34rem),
+        var(--bg);
+    }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible {
+      outline: 2px solid var(--teal);
+      outline-offset: 3px;
+    }
+    button:disabled { cursor: not-allowed; opacity: .46; }
+    .app-shell { width: min(1240px, calc(100% - 48px)); margin: 0 auto; }
+    .topbar {
+      height: 82px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; gap: 12px; align-items: center; }
+    .brand-mark {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border: 1px solid rgba(103, 224, 206, .32);
+      border-radius: 14px;
+      background: linear-gradient(145deg, rgba(103, 224, 206, .18), rgba(103, 224, 206, .04));
+      color: var(--teal);
+    }
+    .brand-mark svg { width: 23px; height: 23px; }
+    .brand-title { font-size: 13px; font-weight: 800; letter-spacing: .14em; }
+    .brand-subtitle { margin-top: 2px; color: var(--muted); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
+    .top-actions { display: flex; align-items: center; gap: 12px; }
+    .profile-chip, .icon-button, .ghost-button, .primary-button, .soft-button, .text-button {
+      border: 1px solid var(--line);
+      cursor: pointer;
+      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    }
+    .profile-chip:hover, .icon-button:hover, .ghost-button:hover, .soft-button:hover { border-color: rgba(103, 224, 206, .48); }
+    .profile-chip { display: flex; align-items: center; gap: 10px; padding: 7px 12px 7px 7px; border-radius: 999px; background: rgba(255,255,255,.025); }
+    .avatar {
+      display: grid;
+      width: 31px;
+      height: 31px;
+      place-items: center;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #f3c778, #f19978);
+      color: #17212a;
+      font-size: 14px;
+      font-weight: 800;
+    }
+    .profile-name { max-width: 130px; overflow: hidden; color: #dce8e7; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .xp-pill { display: flex; align-items: center; gap: 7px; padding: 9px 12px; border: 1px solid rgba(243,199,120,.2); border-radius: 999px; background: rgba(243,199,120,.07); color: var(--gold); font: 500 11px "DM Mono", monospace; }
+    .icon-button { display: grid; width: 39px; height: 39px; place-items: center; border-radius: 13px; background: rgba(255,255,255,.025); color: var(--muted); }
+    .icon-button svg { width: 17px; height: 17px; }
+    main { min-height: calc(100vh - 82px); }
+    .screen { display: none; }
+    .screen.active { display: block; animation: appear .35s ease both; }
+    @keyframes appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .eyebrow { display: flex; align-items: center; gap: 9px; color: var(--teal); font: 500 10px "DM Mono", monospace; letter-spacing: .17em; text-transform: uppercase; }
+    .eyebrow::before { width: 20px; height: 1px; background: currentColor; content: ""; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 18px; font-size: clamp(42px, 6vw, 72px); line-height: 1.03; letter-spacing: -.065em; }
+    h2 { margin-bottom: 12px; font-size: clamp(29px, 4vw, 42px); line-height: 1.1; letter-spacing: -.045em; }
+    h3 { margin-bottom: 7px; font-size: 16px; }
+    p { color: var(--muted); line-height: 1.72; }
+    .accent { color: var(--teal); }
+    .primary-button, .soft-button, .ghost-button, .text-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 48px;
+      padding: 0 19px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .primary-button { border-color: var(--teal); background: var(--teal); color: #08201f; box-shadow: 0 8px 26px rgba(103,224,206,.13); }
+    .primary-button:hover:not(:disabled) { transform: translateY(-2px); background: #83eddd; }
+    .soft-button { border-color: rgba(103,224,206,.2); background: rgba(103,224,206,.08); color: var(--teal); }
+    .soft-button:hover:not(:disabled) { transform: translateY(-2px); background: rgba(103,224,206,.14); }
+    .ghost-button { background: rgba(255,255,255,.025); color: #d9e7e5; }
+    .ghost-button:hover:not(:disabled) { transform: translateY(-2px); }
+    .text-button { min-height: 38px; padding: 0 10px; border-color: transparent; background: transparent; color: var(--muted); }
+    .button-arrow { font-size: 18px; line-height: 1; }
+
+    .home-layout { display: grid; min-height: calc(100vh - 82px); grid-template-columns: 1.03fr .97fr; align-items: center; gap: 42px; padding: 54px 0 65px; }
+    .home-copy { max-width: 570px; }
+    .home-copy h1 { margin-top: 25px; }
+    .home-copy > p { max-width: 485px; margin-bottom: 28px; font-size: 15px; }
+    .home-actions { display: flex; flex-wrap: wrap; gap: 11px; }
+    .profile-input-wrap { max-width: 370px; margin: 29px 0 18px; }
+    .field-label { display: block; margin-bottom: 8px; color: #c1d0d1; font-size: 11px; font-weight: 700; }
+    .text-input {
+      width: 100%;
+      height: 46px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: rgba(3, 13, 22, .45);
+      color: var(--text);
+      font-size: 13px;
+    }
+    .safety-note { display: flex; max-width: 500px; gap: 11px; margin-top: 28px; padding: 13px 15px; border: 1px solid rgba(243,199,120,.15); border-radius: 15px; background: rgba(243,199,120,.045); color: #b7aca0; font-size: 10px; line-height: 1.65; }
+    .safety-note svg { flex: 0 0 17px; width: 17px; margin-top: 1px; color: var(--gold); }
+    .hero-visual { position: relative; min-height: 500px; overflow: hidden; border: 1px solid rgba(178,219,227,.13); border-radius: 30px; background: linear-gradient(155deg, rgba(19,47,63,.9), rgba(8,21,32,.96)); box-shadow: var(--shadow); }
+    .hero-grid { position: absolute; inset: 0; opacity: .35; background-image: linear-gradient(rgba(141,198,205,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(141,198,205,.08) 1px, transparent 1px); background-size: 42px 42px; mask-image: linear-gradient(to bottom, black, transparent 85%); }
+    .hero-orb { position: absolute; top: 16%; left: 30%; width: 245px; height: 245px; border: 1px solid rgba(103,224,206,.34); border-radius: 50%; box-shadow: 0 0 70px rgba(75,204,190,.13), inset 0 0 55px rgba(75,204,190,.11); animation: float 6s ease-in-out infinite; }
+    .hero-orb::before, .hero-orb::after { position: absolute; inset: 18px; border: 1px solid rgba(138,184,255,.3); border-radius: 50%; content: ""; transform: rotateX(68deg); }
+    .hero-orb::after { inset: -14px; border-color: rgba(243,199,120,.2); transform: rotateY(68deg); }
+    @keyframes float { 50% { transform: translateY(-12px) rotate(3deg); } }
+    .hero-molecule { position: absolute; top: 50%; left: 50%; width: 145px; height: 145px; transform: translate(-50%,-50%); }
+    .molecule-core { position: absolute; top: 50%; left: 50%; display: grid; width: 64px; height: 64px; place-items: center; border: 1px solid rgba(103,224,206,.65); border-radius: 50%; background: radial-gradient(circle at 35% 30%, #c1fff4, #33b8ae 65%, #157876); box-shadow: 0 0 35px rgba(103,224,206,.35); color: #063332; font: 800 17px "DM Mono", monospace; transform: translate(-50%,-50%); }
+    .molecule-dot { position: absolute; display: grid; width: 33px; height: 33px; place-items: center; border: 1px solid rgba(243,199,120,.6); border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff1c8, #dfaa57 72%); box-shadow: 0 0 24px rgba(243,199,120,.2); color: #3a2911; font: 700 10px "DM Mono", monospace; }
+    .molecule-dot.one { top: 3px; left: 8px; }.molecule-dot.two { right: 2px; top: 14px; }.molecule-dot.three { bottom: 5px; left: 20px; }.molecule-dot.four { right: 9px; bottom: 3px; }
+    .hero-label { position: absolute; top: 31px; left: 30px; color: #9ab4bd; font: 500 10px "DM Mono", monospace; letter-spacing: .15em; text-transform: uppercase; }
+    .hero-bottom { position: absolute; right: 26px; bottom: 25px; left: 26px; display: flex; align-items: end; justify-content: space-between; gap: 15px; }
+    .hero-caption { max-width: 260px; color: #e2eeed; font-size: 14px; font-weight: 700; line-height: 1.5; }
+    .hero-coordinates { color: #77939d; font: 10px "DM Mono", monospace; text-align: right; line-height: 1.9; }
+    .hero-tag { position: absolute; display: flex; align-items: center; gap: 7px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 12px; background: rgba(6,19,29,.77); color: #dce9e7; font: 10px "DM Mono", monospace; backdrop-filter: blur(8px); }
+    .hero-tag::before { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 10px var(--teal); content: ""; }
+    .hero-tag.tag-a { top: 30%; left: 8%; }.hero-tag.tag-b { top: 57%; right: 6%; }.hero-tag.tag-c { bottom: 20%; left: 15%; }
+
+    .content-wrap { padding: 55px 0 75px; }
+    .page-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 34px; }
+    .page-heading p { max-width: 520px; margin-bottom: 0; }
+    .progress-card { display: flex; min-width: 210px; align-items: center; gap: 13px; padding: 15px 17px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.025); }
+    .progress-ring { position: relative; display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; background: conic-gradient(var(--teal) var(--progress,0%), rgba(255,255,255,.1) 0); }
+    .progress-ring::before { position: absolute; inset: 4px; border-radius: 50%; background: var(--bg-soft); content: ""; }
+    .progress-ring span { position: relative; font: 10px "DM Mono", monospace; }
+    .progress-copy strong { display: block; font-size: 12px; }.progress-copy small { color: var(--muted); font-size: 10px; }
+    .map-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+    .level-card { position: relative; display: flex; min-height: 270px; flex-direction: column; padding: 21px; overflow: hidden; border: 1px solid var(--line); border-radius: 21px; background: linear-gradient(155deg, rgba(20,43,59,.86), rgba(11,26,38,.96)); transition: transform .2s ease, border-color .2s ease; }
+    .level-card:not(.locked):hover { transform: translateY(-5px); border-color: rgba(103,224,206,.42); }
+    .level-card.locked { opacity: .51; }
+    .level-topline { display: flex; align-items: center; justify-content: space-between; }
+    .level-index { color: var(--teal); font: 11px "DM Mono", monospace; letter-spacing: .1em; }
+    .level-icon { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid rgba(103,224,206,.18); border-radius: 14px; background: rgba(103,224,206,.08); color: var(--teal); font-size: 19px; }
+    .level-card:nth-child(2) .level-icon { border-color: rgba(138,184,255,.2); background: rgba(138,184,255,.08); color: var(--blue); }
+    .level-card:nth-child(3) .level-icon { border-color: rgba(243,199,120,.2); background: rgba(243,199,120,.08); color: var(--gold); }
+    .level-card:nth-child(4) .level-icon { border-color: rgba(255,146,125,.2); background: rgba(255,146,125,.08); color: var(--coral); }
+    .level-card h3 { margin: 24px 0 8px; font-size: 17px; }
+    .level-card p { margin-bottom: 20px; font-size: 11px; line-height: 1.65; }
+    .level-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; color: var(--muted); font: 10px "DM Mono", monospace; }
+    .star-row { color: var(--gold); letter-spacing: 2px; }
+    .level-open { border: 0; background: transparent; color: var(--teal); cursor: pointer; font-size: 11px; font-weight: 800; }
+    .map-brief { display: grid; grid-template-columns: 1.1fr .9fr; gap: 15px; margin-top: 20px; }
+    .brief-panel { padding: 20px 22px; border: 1px solid var(--line); border-radius: 19px; background: rgba(255,255,255,.025); }
+    .brief-panel p { margin: 0; font-size: 11px; }
+    .brief-panel .eyebrow { margin-bottom: 11px; }
+    .character-row { display: flex; gap: 12px; align-items: center; }
+    .character-avatar { flex: 0 0 52px; width: 52px; height: 58px; border: 1px solid rgba(243,199,120,.28); border-radius: 14px; background: url("./assets/explorer-reference.png") left center / 200% 100% no-repeat; box-shadow: 0 8px 22px rgba(0,0,0,.24); }
+
+    .guide-shell { width: min(760px, 100%); margin: 0 auto; padding: 75px 0; }
+    .guide-card { padding: clamp(25px, 5vw, 48px); border: 1px solid var(--line); border-radius: 27px; background: linear-gradient(145deg, rgba(17,39,55,.94), rgba(9,24,36,.95)); box-shadow: var(--shadow); }
+    .guide-progress { display: flex; gap: 7px; margin: 26px 0; }
+    .guide-progress span { height: 3px; flex: 1; border-radius: 9px; background: rgba(255,255,255,.1); }
+    .guide-progress span.done { background: var(--teal); }
+    .guide-step-icon { display: grid; width: 62px; height: 62px; margin-bottom: 24px; place-items: center; border: 1px solid rgba(103,224,206,.27); border-radius: 19px; background: rgba(103,224,206,.09); color: var(--teal); font-size: 25px; }
+    .guide-copy { max-width: 540px; min-height: 78px; }
+    .guide-checklist { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; margin: 24px 0 28px; }
+    .guide-check { display: flex; align-items: center; gap: 8px; padding: 11px; border: 1px solid var(--line); border-radius: 12px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+    .guide-check span { color: var(--teal); font-size: 14px; }
+    .guide-footer { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+    .guide-footer small { color: var(--muted); font-size: 10px; }
+
+    .lab-top { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 23px; }
+    .back-link { display: inline-flex; align-items: center; gap: 8px; padding: 8px 0; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 11px; font-weight: 700; }
+    .lab-title { margin: 0; font-size: 15px; letter-spacing: -.02em; }
+    .mission-step { padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font: 10px "DM Mono", monospace; }
+    .lab-layout { display: grid; grid-template-columns: minmax(0,1.42fr) minmax(300px,.78fr); align-items: start; gap: 16px; }
+    .lab-main { min-width: 0; }
+    .scene-card { position: relative; min-height: 345px; overflow: hidden; border: 1px solid rgba(149,211,219,.16); border-radius: 23px; background: radial-gradient(ellipse at 50% 42%, rgba(33,103,116,.22), transparent 52%), linear-gradient(150deg, #0d2533, #081720 78%); }
+    .scene-card canvas { display: block; width: 100%; height: 345px; }
+    .scene-grid { position: absolute; inset: auto 0 0; height: 37%; opacity: .38; background-image: linear-gradient(rgba(104,180,185,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(104,180,185,.12) 1px, transparent 1px); background-size: 35px 35px; mask-image: linear-gradient(transparent, black); pointer-events: none; }
+    .scene-label { position: absolute; z-index: 1; top: 17px; left: 18px; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid rgba(159,216,221,.13); border-radius: 11px; background: rgba(5,17,26,.72); color: #d7e8e7; font: 9px "DM Mono", monospace; letter-spacing: .1em; text-transform: uppercase; backdrop-filter: blur(8px); }
+    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 9px var(--teal); }
+    .scene-legend { position: absolute; right: 15px; bottom: 14px; display: flex; gap: 12px; color: #9eb5b9; font-size: 9px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .legend-dot { width: 7px; height: 7px; border-radius: 50%; background: #f3f5e8; }
+    .legend-dot.liquid { background: #52bfc3; }.legend-dot.gas { background: #f3c778; }
+    .scene-caption { position: absolute; z-index: 1; right: 15px; top: 18px; color: #8ba7ad; font: 9px "DM Mono", monospace; }
+    .scene-compare { position: absolute; z-index: 2; bottom: 40px; left: 14px; display: flex; align-items: center; gap: 5px; padding: 5px; border: 1px solid rgba(177,217,226,.14); border-radius: 12px; background: rgba(5,17,26,.78); backdrop-filter: blur(8px); }
+    .scene-compare-label { padding: 0 5px; color: #93aeb3; font: 8px "DM Mono", monospace; letter-spacing: .06em; }
+    .compare-button { min-height: 28px; padding: 0 9px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #9eb4b8; cursor: pointer; font-size: 9px; }
+    .compare-button[aria-pressed="true"] { border-color: rgba(103,224,206,.3); background: rgba(103,224,206,.12); color: var(--teal); }
+    .avatar-control-panel { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 14px; margin-top: 10px; padding: 13px 15px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.025); }
+    .avatar-control-copy strong { display: block; color: #dceae8; font-size: 11px; }
+    .avatar-control-copy p { margin: 5px 0 0; color: var(--muted); font-size: 9px; line-height: 1.55; }
+    .keycap { display: inline-block; padding: 2px 5px; border: 1px solid rgba(177,217,226,.2); border-radius: 5px; background: rgba(255,255,255,.04); color: #d9e8e7; font: 9px "DM Mono", monospace; }
+    .avatar-control-actions { display: flex; align-items: center; gap: 11px; }
+    .movement-pad { display: grid; grid-template-columns: repeat(3,27px); grid-template-rows: repeat(2,25px); gap: 3px; }
+    .move-button { display: grid; width: 27px; height: 25px; place-items: center; border: 1px solid rgba(177,217,226,.16); border-radius: 7px; background: rgba(5,17,26,.75); color: #c9dcda; cursor: pointer; touch-action: none; user-select: none; }
+    .move-button:hover, .move-button:active { border-color: rgba(103,224,206,.46); background: rgba(103,224,206,.12); color: var(--teal); }
+    .move-up { grid-column: 2; grid-row: 1; }.move-left { grid-column: 1; grid-row: 2; }.move-down { grid-column: 2; grid-row: 2; }.move-right { grid-column: 3; grid-row: 2; }
+    .interact-button { min-height: 40px; padding: 0 12px; border: 1px solid rgba(103,224,206,.28); border-radius: 11px; background: rgba(103,224,206,.1); color: var(--teal); cursor: pointer; font-size: 9px; font-weight: 800; white-space: nowrap; }
+    .interact-button:hover { background: rgba(103,224,206,.17); }
+    .station-locked { padding: 15px; border: 1px dashed rgba(103,224,206,.2); border-radius: 15px; background: rgba(103,224,206,.035); color: #a7bdc0; font-size: 10px; line-height: 1.6; }
+    .station-locked strong { display: block; margin-bottom: 5px; color: var(--teal); font-size: 11px; }
+    .observation-strip { display: flex; align-items: center; gap: 10px; min-height: 48px; margin-top: 10px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.025); color: #c1d2d3; font-size: 10px; line-height: 1.5; }
+    .observation-strip .obs-icon { flex: 0 0 23px; display: grid; width: 23px; height: 23px; place-items: center; border-radius: 8px; background: rgba(103,224,206,.1); color: var(--teal); }
+    .lab-side { display: grid; gap: 12px; }
+    .task-card, .question-card, .hint-card { padding: 19px; border: 1px solid var(--line); border-radius: 19px; background: var(--panel); }
+    .task-card { background: linear-gradient(150deg, rgba(20,46,61,.96), rgba(12,28,40,.96)); }
+    .task-head { display: flex; gap: 11px; align-items: start; }
+    .nova-avatar { display: grid; flex: 0 0 36px; width: 36px; height: 36px; place-items: center; border: 1px solid rgba(243,199,120,.24); border-radius: 12px; background: rgba(243,199,120,.1); font-size: 17px; }
+    .task-meta { color: var(--gold); font: 9px "DM Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
+    .task-card h3 { margin: 5px 0 8px; font-size: 14px; }
+    .task-card p { margin: 0; font-size: 10px; line-height: 1.65; }
+    .chemical-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 11px 12px; border: 1px solid rgba(103,224,206,.13); border-radius: 13px; background: rgba(4,17,25,.35); }
+    .chemical-label { color: var(--muted); font-size: 9px; }
+    .chemical-value { margin-top: 4px; color: #d9e8e7; font: 11px "DM Mono", monospace; }
+    .chemical-status { color: var(--teal); font: 9px "DM Mono", monospace; text-align: right; }
+    .question-card { padding: 17px; }
+    .question-card h4 { margin: 0 0 12px; color: #c4d5d4; font-size: 11px; line-height: 1.5; }
+    .question-kicker { margin-bottom: 7px; color: #77939c; font: 9px "DM Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
+    .choice-list { display: grid; gap: 7px; }
+    .choice-option { position: relative; display: flex; align-items: flex-start; gap: 9px; padding: 10px; border: 1px solid rgba(177,217,226,.1); border-radius: 11px; background: rgba(4,16,24,.29); color: #aabec1; cursor: pointer; font-size: 10px; line-height: 1.5; transition: .15s ease; }
+    .choice-option:hover { border-color: rgba(103,224,206,.32); color: var(--text); }
+    .choice-option:has(input:checked) { border-color: rgba(103,224,206,.48); background: rgba(103,224,206,.08); color: #e5f3f0; }
+    .choice-option input { flex: 0 0 13px; width: 13px; height: 13px; margin: 1px 0 0; accent-color: var(--teal); }
+    .choice-option input:focus-visible { outline-offset: 2px; }
+    .run-row { display: flex; align-items: center; gap: 9px; margin-top: 14px; }
+    .run-row .primary-button { flex: 1; min-height: 43px; padding: 0 12px; font-size: 11px; }
+    .hint-button { display: inline-flex; min-height: 40px; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid rgba(243,199,120,.2); border-radius: 12px; background: rgba(243,199,120,.06); color: var(--gold); cursor: pointer; font-size: 10px; font-weight: 700; }
+    .hint-card { display: none; padding: 12px 14px; border-color: rgba(243,199,120,.19); background: rgba(243,199,120,.05); color: #d9c9a9; font-size: 10px; line-height: 1.6; }
+    .hint-card.visible { display: block; }
+    .hint-title { margin-bottom: 4px; color: var(--gold); font: 9px "DM Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
+    .feedback-line { min-height: 16px; margin: 11px 0 0; color: var(--coral); font-size: 10px; line-height: 1.5; }
+    .feedback-line.good { color: var(--teal); }
+    .lab-explain { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 14px; }
+    .lab-explain.hidden { display: none; }
+    .lab-submission { display: none; margin-top: 11px; }
+    .lab-submission.visible { display: block; }
+    .lab-footer-note { margin: 13px 2px 0; color: #6f8993; font-size: 9px; line-height: 1.6; }
+    .metric-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; margin-top: 14px; }
+    .metric { padding: 11px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.02); }
+    .metric strong { display: block; color: var(--teal); font: 13px "DM Mono", monospace; }
+    .metric span { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; }
+    .result-shell { width: min(760px,100%); margin: 0 auto; padding: 70px 0; }
+    .result-card { position: relative; overflow: hidden; padding: clamp(25px, 5vw, 50px); border: 1px solid rgba(103,224,206,.2); border-radius: 28px; background: radial-gradient(ellipse at 50% 0, rgba(103,224,206,.11), transparent 55%), linear-gradient(150deg, rgba(17,41,56,.98), rgba(8,23,34,.98)); text-align: center; box-shadow: var(--shadow); }
+    .result-burst { display: grid; width: 74px; height: 74px; margin: 0 auto 20px; place-items: center; border: 1px solid rgba(243,199,120,.33); border-radius: 24px; background: rgba(243,199,120,.1); color: var(--gold); font-size: 31px; transform: rotate(-5deg); }
+    .result-card .eyebrow { justify-content: center; }
+    .result-card h2 { margin: 13px 0 8px; }
+    .result-card > p { max-width: 500px; margin: 0 auto; font-size: 12px; }
+    .result-score { display: flex; align-items: center; justify-content: center; gap: 28px; margin: 26px auto; padding: 19px; border: 1px solid var(--line); border-radius: 17px; background: rgba(255,255,255,.025); }
+    .result-score div { min-width: 90px; }
+    .result-score strong { display: block; color: var(--gold); font: 700 23px "DM Mono", monospace; }
+    .result-score span { display: block; margin-top: 5px; color: var(--muted); font-size: 9px; }
+    .result-explanation { max-width: 580px; margin: 0 auto 25px; padding: 15px 17px; border: 1px solid rgba(103,224,206,.15); border-radius: 15px; background: rgba(103,224,206,.045); color: #c7d9d7; font-size: 11px; line-height: 1.7; text-align: left; }
+    .result-explanation strong { color: var(--teal); }
+    .result-badge { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 24px; padding: 8px 12px; border: 1px solid rgba(243,199,120,.2); border-radius: 999px; background: rgba(243,199,120,.07); color: var(--gold); font-size: 10px; font-weight: 700; }
+    .result-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+    .settings-backdrop { position: fixed; z-index: 20; inset: 0; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(2,9,14,.72); backdrop-filter: blur(9px); }
+    .settings-backdrop.open { display: flex; }
+    .settings-dialog { width: min(480px, 100%); padding: 26px; border: 1px solid rgba(177,217,226,.18); border-radius: 23px; background: #102333; box-shadow: var(--shadow); }
+    .settings-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .settings-head h2 { margin: 0; font-size: 23px; }
+    .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 15px 0; border-top: 1px solid var(--line); }
+    .setting-row strong { display: block; font-size: 12px; }.setting-row small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .setting-select { min-width: 115px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: #091a27; color: var(--text); font-size: 11px; }
+    .switch { position: relative; width: 43px; height: 24px; flex: 0 0 43px; border: 1px solid var(--line); border-radius: 999px; background: #07141f; cursor: pointer; }
+    .switch::after { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #8ba0a7; content: ""; transition: transform .18s ease; }
+    .switch[aria-checked="true"] { border-color: rgba(103,224,206,.45); background: rgba(103,224,206,.22); }
+    .switch[aria-checked="true"]::after { background: var(--teal); transform: translateX(18px); }
+    .danger-button { margin-top: 17px; padding: 9px 0; border: 0; background: transparent; color: var(--coral); cursor: pointer; font-size: 10px; font-weight: 700; }
+    .toast { position: fixed; z-index: 30; right: 22px; bottom: 22px; max-width: min(390px, calc(100vw - 44px)); padding: 13px 16px; border: 1px solid rgba(103,224,206,.24); border-radius: 13px; background: #112b39; color: #d8e9e7; box-shadow: var(--shadow); font-size: 11px; line-height: 1.5; opacity: 0; pointer-events: none; transform: translateY(8px); transition: .22s ease; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .subtitle-bar { min-height: 24px; margin: 0 auto; padding: 0 0 16px; color: #718a93; font-size: 9px; text-align: center; }
+    .subtitle-bar[hidden] { display: none; }
+    .quality-low .scene-card canvas { image-rendering: auto; }
+
+    @media (max-width: 940px) {
+      .home-layout { grid-template-columns: 1fr .85fr; gap: 24px; }
+      .hero-visual { min-height: 430px; }
+      .hero-orb { left: 25%; transform: scale(.83); }
+      .map-grid { grid-template-columns: repeat(2,1fr); }
+      .lab-layout { grid-template-columns: minmax(0,1.1fr) minmax(275px,.9fr); }
+    }
+    @media (max-width: 720px) {
+      .app-shell { width: min(100% - 32px, 560px); }
+      .topbar { height: 70px; }
+      main { min-height: calc(100vh - 70px); }
+      .profile-name { display: none; }
+      .xp-pill { padding: 8px 9px; font-size: 10px; }
+      .home-layout { display: flex; min-height: initial; flex-direction: column; align-items: stretch; gap: 26px; padding: 54px 0 45px; }
+      .home-copy { max-width: none; }
+      .home-copy h1 { font-size: clamp(43px, 13vw, 64px); }
+      .hero-visual { min-height: 350px; }
+      .hero-orb { top: 12%; left: calc(50% - 122px); transform: scale(.75); }
+      .hero-tag.tag-a { top: 26%; left: 5%; }.hero-tag.tag-b { top: 54%; right: 4%; }.hero-tag.tag-c { bottom: 19%; left: 8%; }
+      .content-wrap { padding: 42px 0 55px; }
+      .page-heading { align-items: start; flex-direction: column; margin-bottom: 24px; }
+      .progress-card { min-width: 100%; }
+      .map-brief { grid-template-columns: 1fr; }
+      .lab-layout { grid-template-columns: 1fr; }
+      .scene-card { min-height: 280px; }.scene-card canvas { height: 280px; }
+      .avatar-control-panel { grid-template-columns: 1fr; gap: 10px; }
+      .avatar-control-actions { justify-content: space-between; }
+      .lab-side { grid-row: 1; }
+      .guide-shell, .result-shell { padding: 38px 0 55px; }
+      .guide-checklist { grid-template-columns: 1fr; }
+      .guide-check { padding: 9px 11px; }
+      .lab-title { display: none; }
+    }
+    @media (max-width: 430px) {
+      .app-shell { width: calc(100% - 26px); }
+      .brand-title { font-size: 11px; }.brand-subtitle { font-size: 8px; }
+      .brand-mark { width: 37px; height: 37px; }
+      .top-actions { gap: 7px; }
+      .icon-button { width: 36px; height: 36px; }
+      .map-grid { gap: 9px; }
+      .level-card { min-height: 246px; padding: 15px; }
+      .level-card h3 { margin-top: 19px; font-size: 14px; }
+      .level-card p { font-size: 10px; }
+      .hero-caption { max-width: 190px; font-size: 12px; }
+      .hero-coordinates { font-size: 8px; }
+      .result-score { gap: 11px; padding: 15px 8px; }
+      .result-score div { min-width: 75px; }.result-score strong { font-size: 20px; }
+      .lab-top { margin-bottom: 14px; }
+      .task-card, .question-card { padding: 15px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Chemistry Explorer - Trang chủ" id="brandHome">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M9 3h6M10 3v6.2L4.9 18a2 2 0 0 0 1.7 3h10.8a2 2 0 0 0 1.7-3L14 9.2V3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.2 15h9.6M9.3 11.6h5.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="10" cy="17.5" r=".8" fill="currentColor"/><circle cx="14.8" cy="18.2" r=".65" fill="currentColor"/></svg>
+        </span>
+        <span><span class="brand-title">CHEMISTRY EXPLORER</span><span class="brand-subtitle">Trạm nghiên cứu hóa học</span></span>
+      </a>
+      <div class="top-actions">
+        <div class="xp-pill" title="Điểm kinh nghiệm"><span aria-hidden="true">✦</span><span id="headerXp">0 XP</span></div>
+        <button class="profile-chip" id="profileButton" type="button" aria-label="Hồ sơ người chơi">
+          <span class="avatar" id="headerAvatar">N</span><span class="profile-name" id="headerName">Nhà thám hiểm</span>
+        </button>
+        <button class="icon-button" id="openSettings" type="button" aria-label="Cài đặt" title="Cài đặt">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8Z" stroke="currentColor" stroke-width="1.6"/><path d="m19.4 13.5 1.1.9-1.6 2.8-1.4-.5a7.9 7.9 0 0 1-1.6.9l-.2 1.5h-3.3l-.2-1.5a7.9 7.9 0 0 1-1.6-.9l-1.4.5-1.6-2.8 1.1-.9a7.7 7.7 0 0 1 0-1.8l-1.1-.9 1.6-2.8 1.4.5a7.9 7.9 0 0 1 1.6-.9l.2-1.5h3.3l.2 1.5a7.9 7.9 0 0 1 1.6.9l1.4-.5 1.6 2.8-1.1.9a7.7 7.7 0 0 1 0 1.8Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="screen active" id="homeScreen" aria-labelledby="homeTitle">
+        <div class="home-layout">
+          <div class="home-copy">
+            <div class="eyebrow">Phiêu lưu · Mô phỏng · Khám phá</div>
+            <h1 id="homeTitle">Bí mật của<br><span class="accent">những phản ứng</span></h1>
+            <p>Bước vào Trạm Nghiên cứu Hóa học, quan sát thế giới vi mô và giải mã những hiện tượng đang chờ bạn.</p>
+            <div class="profile-input-wrap">
+              <label class="field-label" for="playerName">Nhà thám hiểm hôm nay là</label>
+              <input class="text-input" id="playerName" maxlength="24" autocomplete="nickname" placeholder="Tên của bạn">
+            </div>
+            <div class="home-actions">
+              <button class="primary-button" id="startButton" type="button">Bắt đầu hành trình <span class="button-arrow">→</span></button>
+              <button class="soft-button" id="continueButton" type="button">Tiếp tục <span class="button-arrow">↗</span></button>
+            </div>
+            <div class="safety-note">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 21 7v5c0 5-3.8 8-9 10-5.2-2-9-5-9-10V7l9-4Z" stroke="currentColor" stroke-width="1.5"/><path d="M12 8v5m0 3h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              <span><strong>Mô phỏng chỉ dành cho học tập.</strong> Không thực hiện các phản ứng này ngoài đời. Hoạt động thực hành thật cần được giáo viên tổ chức và kiểm duyệt.</span>
+            </div>
+          </div>
+          <div class="hero-visual" aria-label="Minh họa mô hình phân tử trong phòng thí nghiệm">
+            <div class="hero-grid"></div><div class="hero-label">Mô hình hạt · 01 / 04</div>
+            <div class="hero-orb"><div class="hero-molecule"><span class="molecule-core">Ag</span><span class="molecule-dot one">Cl</span><span class="molecule-dot two">Na</span><span class="molecule-dot three">O</span><span class="molecule-dot four">N</span></div></div>
+            <span class="hero-tag tag-a">quan sát hạt</span><span class="hero-tag tag-b">dấu hiệu phản ứng</span><span class="hero-tag tag-c">khám phá có hướng dẫn</span>
+            <div class="hero-bottom"><div class="hero-caption">Mỗi hiện tượng là một manh mối. Bạn sẽ giải mã được chứ?</div><div class="hero-coordinates">LAB 03<br>20° 16′ N</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="guideScreen" aria-labelledby="guideTitle">
+        <div class="guide-shell">
+          <div class="eyebrow">Khởi động · Làm quen phòng thí nghiệm</div>
+          <div class="guide-card">
+            <div class="guide-progress" id="guideProgress" aria-label="Tiến trình hướng dẫn"></div>
+            <div class="guide-step-icon" id="guideIcon" aria-hidden="true">⌖</div>
+            <div class="eyebrow" id="guideKicker">BOT LAB · HƯỚNG DẪN 01</div>
+            <h2 id="guideTitle" style="margin-top:12px">Chào mừng đến trạm!</h2>
+            <p class="guide-copy" id="guideCopy"></p>
+            <div class="guide-checklist" id="guideChecklist"></div>
+            <div class="guide-footer"><small id="guideCount">Bước 1 / 3</small><button class="primary-button" id="guideNext" type="button">Tiếp theo <span class="button-arrow">→</span></button></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="mapScreen" aria-labelledby="mapTitle">
+        <div class="content-wrap">
+          <div class="page-heading">
+            <div><div class="eyebrow">Bản đồ trạm nghiên cứu</div><h2 id="mapTitle" style="margin-top:13px">Chọn nhiệm vụ</h2><p>Khôi phục dữ liệu của trạm bằng cách dự đoán, quan sát và giải thích bằng chứng.</p></div>
+            <div class="progress-card"><div class="progress-ring" id="progressRing"><span id="progressPercent">0%</span></div><div class="progress-copy"><strong id="progressTitle">Trạm đang chờ</strong><small id="progressCaption">0 / 4 nhiệm vụ hoàn thành</small></div></div>
+          </div>
+          <div class="map-grid" id="mapGrid"></div>
+          <div class="map-brief">
+            <div class="brief-panel"><div class="eyebrow">Mục tiêu chuyến đi</div><p>Quan sát dấu hiệu phản ứng, nhận diện kết tủa, tìm hiểu vai trò chất xúc tác và vận dụng kiến thức vào tình huống mới. Bạn có thể làm lại bất cứ nhiệm vụ nào để cải thiện kết quả.</p></div>
+            <div class="brief-panel"><div class="character-row"><div class="character-avatar" role="img" aria-label="Nhà thám hiểm hóa học"></div><div><div class="eyebrow">Nhà thám hiểm của bạn</div><p>Điều khiển nhân vật trong phòng 3D, đến bàn thí nghiệm và tự tay kích hoạt từng mô phỏng.</p></div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="labScreen" aria-labelledby="labTitle">
+        <div class="content-wrap">
+          <div class="lab-top">
+            <button class="back-link" id="backToMap" type="button"><span aria-hidden="true">←</span> Bản đồ trạm</button>
+            <h2 class="lab-title" id="labTitle">Phòng thí nghiệm</h2>
+            <span class="mission-step" id="missionStep">NHIỆM VỤ 01 / 04</span>
+          </div>
+          <div id="labContent"></div>
+        </div>
+      </section>
+
+      <section class="screen" id="resultScreen" aria-labelledby="resultTitle">
+        <div class="result-shell" id="resultContent"></div>
+      </section>
+    </main>
+    <div class="subtitle-bar" id="subtitleBar" aria-live="polite">Phụ đề: Dự đoán trước · Quan sát kỹ · Giải thích bằng chứng</div>
+  </div>
+
+  <div class="settings-backdrop" id="settingsBackdrop" role="presentation">
+    <section class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="settings-head"><h2 id="settingsTitle">Cài đặt</h2><button class="icon-button" id="closeSettings" type="button" aria-label="Đóng cài đặt">×</button></div>
+      <div class="setting-row"><div><strong>Âm thanh giao diện</strong><small>Bật âm báo nhẹ khi thao tác</small></div><button class="switch" id="soundSwitch" type="button" role="switch" aria-checked="true" aria-label="Âm thanh giao diện"></button></div>
+      <div class="setting-row"><div><strong>Phụ đề hướng dẫn</strong><small>Hiện chú thích ngắn trong màn chơi</small></div><button class="switch" id="subtitleSwitch" type="button" role="switch" aria-checked="true" aria-label="Phụ đề hướng dẫn"></button></div>
+      <div class="setting-row"><div><strong>Chất lượng đồ họa</strong><small>Điều chỉnh hiệu năng mô phỏng 3D</small></div><select class="setting-select" id="qualitySelect" aria-label="Chất lượng đồ họa"><option value="high">Cao</option><option value="low">Tiết kiệm</option></select></div>
+      <button class="danger-button" id="resetProgress" type="button">Xóa toàn bộ tiến độ trên thiết bị này</button>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module">
+    const lessons = [
+      {
+        id: 1, title: "Làm quen phòng lab", short: "Nhận diện chất, dụng cụ và dấu hiệu phản ứng.", icon: "⌕", time: "4 phút",
+        goal: "Tìm dấu hiệu cho biết các chất đã tạo thành chất mới.",
+        prompt: "Trong mô phỏng hai dung dịch được trộn, dấu hiệu nào cho thấy đã xuất hiện sản phẩm mới?",
+        prediction: ["Xuất hiện chất rắn trắng mới trong dung dịch", "Chỉ có giọt nước bay hơi khỏi cốc", "Dung dịch được khuấy nhưng không đổi"],
+        observationPrompt: "Bảng quan sát ghi nhận hiện tượng nào?",
+        observations: ["Có chất rắn trắng lơ lửng rồi lắng xuống", "Chỉ có chất lỏng chuyển động khi khuấy", "Không xuất hiện dấu hiệu quan sát được"],
+        explanationPrompt: "Kết luận nào phù hợp nhất với bằng chứng?",
+        explanations: ["Chất rắn mới hình thành là một dấu hiệu của phản ứng hóa học", "Mọi thay đổi hình dạng đều tạo ra chất mới", "Kết tủa chỉ là bọt khí trong dung dịch"],
+        predictionAnswer: 0, observationAnswer: 0, explanationAnswer: 0,
+        chemicals: "Mô hình dung dịch A + dung dịch B", formula: "Mô phỏng minh họa", status: "MẪU ẢO",
+        observation: "Các hạt trắng mới hình thành, chuyển động trong dung dịch rồi lắng dần xuống đáy.",
+        explanation: "Sự xuất hiện của chất rắn mới là bằng chứng quan sát được cho thấy sản phẩm mới đã hình thành. Cần kết hợp bằng chứng này với mô hình và phương trình để giải thích phản ứng.",
+        hints: ["Hãy tìm dấu hiệu cho thấy có chất mới được tạo ra, không chỉ có sự chuyển động.", "Quan sát phần hạt màu trắng trong bình sau khi hai dung dịch được trộn.", "Đối chiếu mô tả quan sát với lựa chọn nói về chất rắn mới hình thành."],
+        badge: "Nhà quan sát"
+      },
+      {
+        id: 2, title: "Bí ẩn kết tủa", short: "Dự đoán phản ứng trao đổi ion và nhận diện AgCl.", icon: "✧", time: "6 phút",
+        goal: "Chọn đúng cặp dung dịch tạo kết tủa và gọi tên sản phẩm.",
+        prompt: "Cặp dung dịch nào được dự đoán tạo ra chất rắn không tan?",
+        prediction: ["AgNO₃(aq) + NaCl(aq)", "NaNO₃(aq) + KCl(aq)", "NaCl(aq) + KNO₃(aq)"],
+        observationPrompt: "Sau khi trộn AgNO₃ và NaCl, bạn quan sát thấy gì?",
+        observations: ["Chất rắn trắng xuất hiện rồi lắng xuống", "Dung dịch sôi và tạo khói", "Dung dịch biến mất hoàn toàn"],
+        explanationPrompt: "Chất rắn trắng là sản phẩm nào trong phương trình?",
+        explanations: ["AgCl(s) — bạc clorua, kết tủa không tan", "NaNO₃(aq) — natri nitrat tan trong nước", "AgNO₃(aq) — bạc nitrat vẫn ở dạng dung dịch"],
+        predictionAnswer: 0, observationAnswer: 0, explanationAnswer: 0,
+        chemicals: "AgNO₃(aq) + NaCl(aq)", formula: "AgNO₃ + NaCl → AgCl↓ + NaNO₃", status: "TẠO KẾT TỦA",
+        observation: "Các hạt trắng AgCl hình thành trong dung dịch và lắng xuống đáy bình.",
+        explanation: "Phương trình cân bằng: AgNO₃(aq) + NaCl(aq) → AgCl(s)↓ + NaNO₃(aq). AgCl là chất rắn ít tan tạo thành kết tủa; NaNO₃ vẫn ở trong dung dịch.",
+        hints: ["Hãy nghĩ đến cặp ion có thể tạo thành một chất rắn ít tan.", "Tập trung vào Ag⁺ và Cl⁻ khi hai dung dịch trộn với nhau.", "Quan sát chất rắn trắng và phân biệt nó với sản phẩm vẫn tan trong nước."],
+        badge: "Chuyên gia kết tủa"
+      },
+      {
+        id: 3, title: "Dấu ấn chất xúc tác", short: "So sánh tốc độ và xác định vai trò của MnO₂.", icon: "◉", time: "6 phút",
+        goal: "So sánh tốc độ phản ứng và phân biệt chất xúc tác với chất phản ứng.",
+        prompt: "Trong mô phỏng phân hủy H₂O₂, điều gì xảy ra khi có MnO₂ làm chất xúc tác?",
+        prediction: ["Phản ứng diễn ra nhanh hơn", "Phản ứng dừng lại hoàn toàn", "MnO₂ bị chuyển hết thành khí"],
+        observationPrompt: "So sánh hai mô phỏng có và không có MnO₂.",
+        observations: ["Có MnO₂, bọt khí xuất hiện nhanh hơn", "Hai mô phỏng có tốc độ giống hệt nhau", "MnO₂ biến mất khi mô phỏng kết thúc"],
+        explanationPrompt: "Mô tả nào đúng về vai trò của MnO₂?",
+        explanations: ["Làm thay đổi tốc độ phản ứng và không bị tiêu hao sau phản ứng", "Là sản phẩm khí được tạo thành từ H₂O₂", "Là chất phản ứng bị dùng hết để tạo nước"],
+        predictionAnswer: 0, observationAnswer: 0, explanationAnswer: 0,
+        chemicals: "H₂O₂(aq) · có / không MnO₂", formula: "2H₂O₂ → 2H₂O + O₂  (MnO₂)", status: "SO SÁNH TỐC ĐỘ",
+        observation: "Bọt khí O₂ xuất hiện nhanh hơn trong mô phỏng có MnO₂; lượng chất xúc tác được giữ nguyên trong mô hình.",
+        explanation: "MnO₂ làm thay đổi tốc độ phân hủy H₂O₂ nhưng không bị tiêu hao như chất phản ứng. Phương trình tổng quát: 2H₂O₂(aq) → 2H₂O(l) + O₂(g); MnO₂ được ghi trên mũi tên phản ứng.",
+        hints: ["So sánh tốc độ xuất hiện bọt khí giữa hai bình thay vì chỉ nhìn lượng cuối cùng.", "Chất xúc tác ảnh hưởng đến tốc độ, nhưng không đồng nghĩa với việc trở thành sản phẩm.", "Kiểm tra xem MnO₂ còn được biểu diễn sau khi phản ứng hoàn tất hay không."],
+        badge: "Bậc thầy xúc tác"
+      },
+      {
+        id: 4, title: "Thử thách chuyên gia", short: "Vận dụng bằng chứng để chọn yếu tố ảnh hưởng tốc độ.", icon: "⌘", time: "7 phút",
+        goal: "Vận dụng kiến thức về tốc độ phản ứng vào tình huống mới.",
+        prompt: "Một mô hình phản ứng cần diễn ra nhanh hơn. Thay đổi nào là lựa chọn phù hợp để khảo sát?",
+        prediction: ["Tăng nhiệt độ trong mô phỏng có kiểm soát", "Đổi nhãn tên các chất", "Giảm lượng dữ liệu quan sát"],
+        observationPrompt: "Ở mô hình so sánh, mẫu được gia nhiệt vừa phải có dấu hiệu gì?",
+        observations: ["Các hạt chuyển động nhanh hơn và phản ứng diễn ra nhanh hơn", "Các hạt ngừng chuyển động", "Sản phẩm tự biến mất"],
+        explanationPrompt: "Kết luận nào dùng bằng chứng phù hợp mà không nhầm vai trò chất xúc tác?",
+        explanations: ["Nhiệt độ có thể làm thay đổi tốc độ; cần giữ các yếu tố khác để so sánh công bằng", "Tốc độ chỉ phụ thuộc vào màu sắc của nhãn", "Chất xúc tác luôn bị tiêu hao khi tăng nhiệt độ"],
+        predictionAnswer: 0, observationAnswer: 0, explanationAnswer: 0,
+        chemicals: "Mô hình hạt · nhiệt độ thấp / cao", formula: "So sánh định tính, giữ các yếu tố khác như nhau", status: "THỬ THÁCH",
+        observation: "Trong mô hình định tính, hạt chuyển động nhanh hơn và va chạm thường xuyên hơn khi nhiệt độ tăng.",
+        explanation: "Nhiệt độ là một yếu tố có thể ảnh hưởng đến tốc độ phản ứng. Một so sánh hợp lý chỉ thay đổi một yếu tố, giữ những điều kiện khác như nhau và dựa trên bằng chứng quan sát. Mô hình này chỉ minh họa định tính.",
+        hints: ["Hãy chọn một yếu tố phản ứng có thể được khảo sát, không phải thay đổi giao diện.", "So sánh chuyển động của hạt và giữ các điều kiện khác như nhau.", "Một kết luận tốt nêu rõ yếu tố được thay đổi và bằng chứng quan sát được."],
+        badge: "Nhà thám hiểm chuyên gia"
+      }
+    ];
+
+    const storageKey = "chemistry-explorer-progress-v1";
+    const defaultState = {
+      name: "", xp: 0, unlocked: 1, completed: {}, best: {}, badges: [],
+      guideDone: false, settings: { sound: true, subtitles: true, quality: "high" }
+    };
+    let game = loadState();
+    let activeLesson = lessons[0];
+    let catalystEnabled = false;
+    let labState = createLabState(1);
+    let guideStep = 0;
+    let lastResult = null;
+    let toastTimer;
+    let threeApi = null;
+    let renderer = null;
+    let threeInitStarted = false;
+    let explorerAvatar = null;
+    let avatarArms = [];
+    let movementKeys = new Set();
+    let stationRing = null;
+    let isNearStation = false;
+    let avatarPourUntil = 0;
+    let lastAnimationTime = 0;
+    let lastInteractionRefresh = 0;
+    let scene = null;
+    let camera = null;
+    let controls = null;
+    let vessel = null;
+    let liquid = null;
+    let particles = [];
+    let sceneClock = 0;
+    let simulationMode = "idle";
+
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+        if (!saved || typeof saved !== "object") return cloneValue(defaultState);
+        return {
+          ...cloneValue(defaultState),
+          ...saved,
+          completed: saved.completed && typeof saved.completed === "object" ? saved.completed : {},
+          best: saved.best && typeof saved.best === "object" ? saved.best : {},
+          badges: Array.isArray(saved.badges) ? saved.badges : [],
+          settings: { ...defaultState.settings, ...(saved.settings || {}) }
+        };
+      } catch (error) {
+        console.warn("Không thể đọc tiến độ đã lưu.", error);
+        return cloneValue(defaultState);
+      }
+    }
+    function cloneValue(value) {
+      return typeof structuredClone === "function" ? structuredClone(value) : JSON.parse(JSON.stringify(value));
+    }
+    function saveState() {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(game));
+      } catch (error) {
+        console.warn("Không thể lưu tiến độ trên thiết bị này.", error);
+        showToast("Không thể lưu tiến độ trên thiết bị này. Bạn vẫn có thể tiếp tục chơi.");
+      }
+      updateHeader();
+    }
+    function createLabState(levelId) {
+      return { levelId, stationReady: false, prediction: null, observation: null, explanation: null, ran: false, hints: 0, attempts: 0, feedback: "" };
+    }
+    function escapeHTML(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    }
+    function showScreen(id) {
+      document.querySelectorAll(".screen").forEach(screen => screen.classList.toggle("active", screen.id === id));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (id === "labScreen") requestAnimationFrame(resizeScene);
+    }
+    function updateHeader() {
+      const name = game.name || "Nhà thám hiểm";
+      document.getElementById("headerName").textContent = name;
+      document.getElementById("headerAvatar").textContent = [...name][0]?.toLocaleUpperCase("vi") || "N";
+      document.getElementById("headerXp").textContent = `${game.xp || 0} XP`;
+      document.getElementById("playerName").value = game.name || "";
+      document.getElementById("continueButton").textContent = game.guideDone ? "Tiếp tục hành trình ↗" : "Vào bản đồ ↗";
+      document.getElementById("subtitleBar").hidden = !game.settings.subtitles;
+    }
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 2800);
+    }
+    function playTone() {
+      if (!game.settings.sound) return;
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        const context = new AudioContextClass();
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = "sine";
+        oscillator.frequency.value = 620;
+        gain.gain.setValueAtTime(.035, context.currentTime);
+        gain.gain.exponentialRampToValueAtTime(.001, context.currentTime + .12);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start();
+        oscillator.stop(context.currentTime + .12);
+        oscillator.onended = () => context.close();
+      } catch (error) {
+        console.warn("Không thể phát âm thanh giao diện.", error);
+      }
+    }
+    function navigate(id) {
+      showScreen(id);
+      if (id === "mapScreen") renderMap();
+      if (id === "homeScreen") updateHeader();
+    }
+
+    function renderMap() {
+      const completedCount = lessons.filter(lesson => game.completed[lesson.id]).length;
+      const percent = Math.round(completedCount / lessons.length * 100);
+      document.getElementById("progressPercent").textContent = `${percent}%`;
+      document.getElementById("progressRing").style.setProperty("--progress", `${percent}%`);
+      document.getElementById("progressTitle").textContent = completedCount === lessons.length ? "Trạm đã khôi phục" : completedCount ? "Đang tiến triển" : "Trạm đang chờ";
+      document.getElementById("progressCaption").textContent = `${completedCount} / ${lessons.length} nhiệm vụ hoàn thành`;
+      document.getElementById("mapGrid").innerHTML = lessons.map(lesson => {
+        const locked = lesson.id > game.unlocked;
+        const completed = !!game.completed[lesson.id];
+        const stars = game.best[lesson.id]?.stars || 0;
+        const starText = completed ? "★".repeat(stars) + "☆".repeat(3 - stars) : "☆☆☆";
+        return `<article class="level-card ${locked ? "locked" : ""}">
+          <div class="level-topline"><span class="level-index">KHU VỰC 0${lesson.id}</span><span class="level-icon" aria-hidden="true">${locked ? "⌑" : lesson.icon}</span></div>
+          <h3>${escapeHTML(lesson.title)}</h3><p>${escapeHTML(lesson.short)}</p>
+          <div class="level-card-footer"><span>${completed ? `<span class="star-row">${starText}</span>` : lesson.time}</span>
+          ${locked ? `<span>🔒 Đang khóa</span>` : `<button class="level-open" type="button" data-level="${lesson.id}">${completed ? "Chơi lại ↗" : "Khám phá →"}</button>`}</div>
+        </article>`;
+      }).join("");
+      document.querySelectorAll("[data-level]").forEach(button => button.addEventListener("click", () => openLesson(Number(button.dataset.level))));
+    }
+    function openLesson(levelId) {
+      const lesson = lessons.find(item => item.id === levelId);
+      if (!lesson || levelId > game.unlocked) return;
+      activeLesson = lesson;
+      catalystEnabled = false;
+      labState = createLabState(levelId);
+      document.getElementById("missionStep").textContent = `NHIỆM VỤ 0${lesson.id} / 04`;
+      document.getElementById("labTitle").textContent = lesson.title;
+      renderLab();
+      navigate("labScreen");
+      setSceneMode("idle", lesson.id);
+      if (!threeInitStarted) initThree();
+      playTone();
+    }
+    function optionGroup(kicker, prompt, options, name, selected, groupClass = "") {
+      return `<div class="question-card ${groupClass}">
+        <div class="question-kicker">${kicker}</div><h4>${escapeHTML(prompt)}</h4>
+        <div class="choice-list">${options.map((option, index) => `<label class="choice-option"><input type="radio" name="${name}" value="${index}" ${selected === index ? "checked" : ""}><span>${escapeHTML(option)}</span></label>`).join("")}</div>
+      </div>`;
+    }
+    function renderLab() {
+      const lesson = activeLesson;
+      const previousCanvas = document.getElementById("labCanvas");
+      const predictionPanel = !labState.ran
+        ? labState.stationReady
+          ? optionGroup("01 · Dự đoán", lesson.prompt, lesson.prediction, "prediction", labState.prediction)
+          : `<div class="station-locked"><strong>Nhà thám hiểm, hãy đến bàn thí nghiệm</strong>Di chuyển nhân vật trong không gian 3D. Khi đứng gần bàn, nhấn <span class="keycap">E</span> để bắt đầu nhiệm vụ.</div>`
+        : "";
+      const observationPanel = labState.ran ? optionGroup("02 · Quan sát", lesson.observationPrompt, lesson.observations, "observation", labState.observation) : "";
+      const explanationPanel = labState.ran ? `<div class="lab-explain">${optionGroup("03 · Giải thích", lesson.explanationPrompt, lesson.explanations, "explanation", labState.explanation)}</div>` : "";
+      const hintText = labState.hints ? lesson.hints[Math.min(labState.hints, lesson.hints.length) - 1] : "";
+      const catalystControls = lesson.id === 3 && labState.ran
+        ? `<div class="scene-compare" role="group" aria-label="So sánh mô phỏng có và không có chất xúc tác">
+            <span class="scene-compare-label">SO SÁNH</span>
+            <button class="compare-button" type="button" data-catalyst="off" aria-pressed="${!catalystEnabled}">Không xúc tác</button>
+            <button class="compare-button" type="button" data-catalyst="on" aria-pressed="${catalystEnabled}">Có MnO₂</button>
+          </div>`
+        : "";
+      document.getElementById("labContent").innerHTML = `
+        <div class="lab-layout">
+          <div class="lab-main">
+            <div class="scene-card">
+              <div class="scene-label"><span class="live-dot"></span> MÔ PHỎNG SỐ · CHỈ QUAN SÁT</div>
+              <div class="scene-caption" id="sceneCaption">THÍ NGHIỆM ẢO 3D</div><canvas id="labCanvas" aria-label="Mô phỏng 3D phản ứng hóa học trong bình thủy tinh"></canvas>
+              ${catalystControls}
+              <div class="scene-grid"></div>
+              <div class="scene-legend"><span class="legend-item"><i class="legend-dot liquid"></i>Dung dịch</span><span class="legend-item"><i class="legend-dot"></i>Kết tủa</span><span class="legend-item"><i class="legend-dot gas"></i>Khí</span></div>
+            </div>
+            <div class="avatar-control-panel">
+              <div class="avatar-control-copy"><strong id="avatarStatus">Nhà thám hiểm · đang tải mô hình</strong><p><span class="keycap">W</span><span class="keycap">A</span><span class="keycap">S</span><span class="keycap">D</span> / phím mũi tên hoặc cụm phím bên cạnh để di chuyển · <span class="keycap">E</span> tương tác · Dùng chuột để xoay góc nhìn.</p></div>
+              <div class="avatar-control-actions">
+                <div class="movement-pad" role="group" aria-label="Phím điều khiển nhân vật">
+                  <button class="move-button move-up" type="button" data-move="w" aria-label="Đi lên">↑</button>
+                  <button class="move-button move-left" type="button" data-move="a" aria-label="Đi sang trái">←</button>
+                  <button class="move-button move-down" type="button" data-move="s" aria-label="Đi xuống">↓</button>
+                  <button class="move-button move-right" type="button" data-move="d" aria-label="Đi sang phải">→</button>
+                </div>
+                <button class="interact-button" id="interactButton" type="button">E · Tương tác</button>
+              </div>
+            </div>
+            <div class="observation-strip" aria-live="polite"><span class="obs-icon">◎</span><span>${labState.ran ? escapeHTML(lesson.observation) : "Chọn dự đoán trước, sau đó chạy mô phỏng để ghi nhận bằng chứng."}</span></div>
+            <p class="lab-footer-note">Mô hình 3D mang tính minh họa định tính. Có thể kéo để xoay và cuộn để phóng to/thu nhỏ. Không dùng làm hướng dẫn thực hành ngoài đời.</p>
+          </div>
+          <div class="lab-side">
+            <article class="task-card">
+              <div class="task-head"><div class="nova-avatar" aria-hidden="true">🧑‍🔬</div><div><div class="task-meta">Giáo sư Nova · Nhiệm vụ</div><h3>${escapeHTML(lesson.goal)}</h3></div></div>
+              <p>${labState.ran ? "Hãy ghi nhận dấu hiệu trong mô phỏng rồi giải thích bằng chứng bạn quan sát được." : "Hãy đưa ra dự đoán trước khi chạy mô phỏng. Dữ liệu phòng lab chỉ tồn tại trong môi trường ảo."}</p>
+              <div class="chemical-card"><div><div class="chemical-label">Mẫu mô phỏng</div><div class="chemical-value">${escapeHTML(lesson.chemicals)}</div></div><div><div class="chemical-status">${escapeHTML(lesson.status)}</div></div></div>
+              <div class="chemical-value" style="margin-top:10px;color:#8da8ad;font-size:9px">${escapeHTML(lesson.formula)}</div>
+            </article>
+            ${predictionPanel}
+            ${observationPanel}
+            ${explanationPanel}
+            <div class="hint-card ${labState.hints ? "visible" : ""}" id="hintCard"><div class="hint-title">Gợi ý ${labState.hints ? `${labState.hints} / 3` : ""} · Bot Lab</div>${escapeHTML(hintText)}</div>
+            <div class="run-row">
+              ${!labState.ran
+                ? `<button class="primary-button" id="runSimulation" type="button" ${labState.prediction === null ? "disabled" : ""}>Thêm mẫu mô phỏng <span class="button-arrow">→</span></button>`
+                : `<button class="primary-button" id="submitAnswers" type="button">Kiểm tra kết luận <span class="button-arrow">→</span></button>`}
+              <button class="hint-button" id="hintButton" type="button" aria-label="Nhận gợi ý">✦ Gợi ý</button>
+            </div>
+            <p class="feedback-line ${labState.feedback ? "visible" : ""}" id="feedbackLine">${escapeHTML(labState.feedback)}</p>
+            <button class="text-button" id="resetLab" type="button">↺ Đặt lại nhiệm vụ</button>
+          </div>
+        </div>`;
+      const nextCanvas = document.getElementById("labCanvas");
+      if (previousCanvas && nextCanvas) nextCanvas.replaceWith(previousCanvas);
+
+      document.querySelectorAll('input[name="prediction"]').forEach(input => input.addEventListener("change", event => {
+        labState.prediction = Number(event.target.value);
+        document.getElementById("runSimulation").disabled = false;
+        refreshInteractionUi();
+        playTone();
+      }));
+      document.querySelectorAll('input[name="observation"]').forEach(input => input.addEventListener("change", event => { labState.observation = Number(event.target.value); refreshInteractionUi(); }));
+      document.querySelectorAll('input[name="explanation"]').forEach(input => input.addEventListener("change", event => { labState.explanation = Number(event.target.value); refreshInteractionUi(); }));
+      document.querySelectorAll("[data-move]").forEach(button => {
+        const key = button.dataset.move;
+        button.addEventListener("pointerdown", event => { event.preventDefault(); movementKeys.add(key); });
+        ["pointerup", "pointerleave", "pointercancel"].forEach(type => button.addEventListener(type, () => movementKeys.delete(key)));
+        button.addEventListener("click", () => moveExplorerStep(key));
+      });
+      document.getElementById("interactButton").addEventListener("click", interactWithLab);
+      document.querySelectorAll("[data-catalyst]").forEach(button => button.addEventListener("click", event => {
+        catalystEnabled = event.currentTarget.dataset.catalyst === "on";
+        document.querySelectorAll("[data-catalyst]").forEach(control => control.setAttribute("aria-pressed", String(control.dataset.catalyst === (catalystEnabled ? "on" : "off"))));
+        setSceneMode("reaction", activeLesson.id);
+        document.getElementById("sceneCaption").textContent = catalystEnabled ? "CÓ MnO₂ · NHANH HƠN" : "KHÔNG XÚC TÁC";
+        playTone();
+      }));
+      document.getElementById("hintButton").addEventListener("click", revealHint);
+      document.getElementById("resetLab").addEventListener("click", () => openLesson(activeLesson.id));
+      const runButton = document.getElementById("runSimulation");
+      if (runButton) runButton.addEventListener("click", () => {
+        if (labState.prediction === null) return;
+        runSimulation();
+      });
+      const submitButton = document.getElementById("submitAnswers");
+      if (submitButton) submitButton.addEventListener("click", checkAnswers);
+      if (document.getElementById("labScreen").classList.contains("active")) resizeScene();
+      else requestAnimationFrame(resizeScene);
+      refreshInteractionUi();
+    }
+    function revealHint() {
+      labState.hints = Math.min(labState.hints + 1, 3);
+      renderLab();
+      playTone();
+    }
+    function refreshInteractionUi() {
+      const status = document.getElementById("avatarStatus");
+      const button = document.getElementById("interactButton");
+      if (!status || !button) return;
+      if (!explorerAvatar) {
+        status.textContent = "Đang tải nhà thám hiểm 3D…";
+        button.textContent = "Đang tải…";
+        return;
+      }
+      const distance = Math.hypot(explorerAvatar.position.x, explorerAvatar.position.z);
+      isNearStation = distance <= 1.8;
+      if (!isNearStation) {
+        status.textContent = `Tiến gần bàn thí nghiệm · cách ${distance.toFixed(1)} m`;
+        button.textContent = "E · Đến bàn";
+      } else if (!labState.stationReady) {
+        status.textContent = "Bạn đang ở bàn thí nghiệm · nhấn E để bắt đầu";
+        button.textContent = "E · Bắt đầu";
+      } else if (!labState.ran && labState.prediction === null) {
+        status.textContent = "Đưa ra dự đoán trước khi thêm mẫu mô phỏng";
+        button.textContent = "E · Chờ dự đoán";
+      } else if (!labState.ran) {
+        status.textContent = "Sẵn sàng thao tác · nhấn E để thêm mẫu vào bình";
+        button.textContent = "E · Thêm mẫu";
+      } else if (labState.observation === null || labState.explanation === null) {
+        status.textContent = "Quan sát hiện tượng rồi chọn bằng chứng và lời giải thích";
+        button.textContent = "E · Chờ kết luận";
+      } else {
+        status.textContent = "Đã đủ dữ liệu · nhấn E để kiểm tra kết luận";
+        button.textContent = "E · Kiểm tra";
+      }
+    }
+    function interactWithLab() {
+      if (!explorerAvatar) {
+        showToast("Mô hình nhân vật 3D đang tải. Vui lòng đợi một chút.");
+        return;
+      }
+      const distance = Math.hypot(explorerAvatar.position.x, explorerAvatar.position.z);
+      if (distance > 1.8) {
+        showToast("Hãy điều khiển nhân vật đến vùng sáng quanh bàn thí nghiệm trước.");
+        refreshInteractionUi();
+        return;
+      }
+      if (!labState.stationReady) {
+        labState.stationReady = true;
+        renderLab();
+        showToast("Đã vào trạm! Hãy chọn dự đoán trước khi thêm mẫu mô phỏng.");
+      } else if (!labState.ran) {
+        if (labState.prediction === null) {
+          showToast("Hãy chọn một dự đoán trước khi thao tác với bình mô phỏng.");
+          return;
+        }
+        runSimulation();
+      } else if (labState.observation === null || labState.explanation === null) {
+        showToast("Chọn hiện tượng quan sát và lời giải thích trước nhé.");
+      } else {
+        checkAnswers();
+      }
+      refreshInteractionUi();
+    }
+    function runSimulation() {
+      labState.ran = true;
+      labState.feedback = "";
+      avatarPourUntil = performance.now() + 900;
+      renderLab();
+      setSceneMode("reaction", activeLesson.id);
+      playTone();
+    }
+    function checkAnswers() {
+      if (labState.observation === null || labState.explanation === null) {
+        labState.feedback = "Hãy chọn một mô tả quan sát và một lời giải thích trước khi kiểm tra.";
+        renderLab();
+        return;
+      }
+      labState.attempts += 1;
+      const predictionCorrect = labState.prediction === activeLesson.predictionAnswer;
+      const observationCorrect = labState.observation === activeLesson.observationAnswer;
+      const explanationCorrect = labState.explanation === activeLesson.explanationAnswer;
+      if (predictionCorrect && observationCorrect && explanationCorrect) {
+        completeLesson();
+        return;
+      }
+      const missed = [
+        !predictionCorrect && "dự đoán ban đầu",
+        !observationCorrect && "mô tả hiện tượng",
+        !explanationCorrect && "lời giải thích"
+      ].filter(Boolean);
+      labState.feedback = `Chưa khớp ở phần ${missed.join(", ")}. Hãy xem lại bằng chứng, điều chỉnh lựa chọn và thử lại — sai lần đầu là một phần của khám phá.`;
+      renderLab();
+    }
+    function completeLesson() {
+      const rawScore = 100 + 50 + (labState.hints === 0 ? 20 : 0);
+      const oldBest = game.best[activeLesson.id]?.xp || 0;
+      const gained = Math.max(0, rawScore - oldBest);
+      const stars = labState.hints === 0 ? 3 : labState.hints <= 2 ? 2 : 1;
+      game.xp += gained;
+      game.completed[activeLesson.id] = true;
+      game.best[activeLesson.id] = {
+        xp: Math.max(rawScore, oldBest),
+        stars: Math.max(stars, game.best[activeLesson.id]?.stars || 0),
+        hints: labState.hints,
+        attempts: labState.attempts
+      };
+      game.unlocked = Math.max(game.unlocked, Math.min(lessons.length, activeLesson.id + 1));
+      if (!game.badges.includes(activeLesson.badge)) game.badges.push(activeLesson.badge);
+      saveState();
+      lastResult = { lesson: activeLesson, gained, score: rawScore, stars, hints: labState.hints };
+      renderResult();
+      navigate("resultScreen");
+      setSceneMode("idle", activeLesson.id);
+      playTone();
+    }
+    function renderResult() {
+      const { lesson, gained, score, stars, hints } = lastResult;
+      const nextUnlocked = lesson.id < lessons.length && game.unlocked > lesson.id;
+      document.getElementById("resultContent").innerHTML = `
+        <article class="result-card">
+          <div class="result-burst" aria-hidden="true">✦</div>
+          <div class="eyebrow">Nhiệm vụ đã hoàn thành</div>
+          <h2 id="resultTitle">${escapeHTML(lesson.title)}</h2>
+          <p>Bạn đã dự đoán, quan sát và đưa ra kết luận dựa trên bằng chứng.</p>
+          <div class="result-score">
+            <div><strong>+${gained}</strong><span>XP mới nhận</span></div>
+            <div><strong>${"★".repeat(stars)}${"☆".repeat(3 - stars)}</strong><span>Thành tích lượt này</span></div>
+            <div><strong>${hints}</strong><span>Gợi ý đã dùng</span></div>
+          </div>
+          <div class="result-badge"><span aria-hidden="true">✧</span> Huy hiệu: ${escapeHTML(lesson.badge)}</div>
+          <div class="result-explanation"><strong>Giải thích khoa học</strong><br>${escapeHTML(lesson.explanation)}</div>
+          <div class="result-actions">
+            <button class="primary-button" id="resultContinue" type="button">${nextUnlocked ? "Đến nhiệm vụ tiếp theo" : "Quay về bản đồ"} <span class="button-arrow">→</span></button>
+            <button class="ghost-button" id="resultReplay" type="button">↺ Chơi lại để cải thiện</button>
+            <button class="text-button" id="resultMap" type="button">Bản đồ trạm</button>
+          </div>
+        </article>`;
+      document.getElementById("resultContinue").addEventListener("click", () => nextUnlocked ? openLesson(lesson.id + 1) : navigate("mapScreen"));
+      document.getElementById("resultReplay").addEventListener("click", () => openLesson(lesson.id));
+      document.getElementById("resultMap").addEventListener("click", () => navigate("mapScreen"));
+    }
+
+    const guideContent = [
+      { icon: "⌖", title: "Chào mừng đến trạm!", copy: "Giáo sư Nova và Bot Lab sẽ đồng hành cùng bạn. Mỗi nhiệm vụ bắt đầu bằng một dự đoán, tiếp theo là mô phỏng ảo và phần giải thích bằng chứng.", checks: ["Đọc mục tiêu nhiệm vụ", "Dự đoán trước khi chạy", "Không có thí nghiệm thật"] },
+      { icon: "◉", title: "Điều khiển nhà thám hiểm", copy: "Dùng W/A/S/D hoặc phím mũi tên để di chuyển nhân vật; trên điện thoại có thể dùng cụm phím điều khiển. Đến gần bàn thí nghiệm rồi nhấn E để tương tác. Kéo chuột để xoay góc nhìn 3D.", checks: ["W/A/S/D để di chuyển", "E để tương tác với bàn", "Quan sát mô hình 3D"] },
+      { icon: "✦", title: "Suy luận và tiến bộ", copy: "Chọn mô tả hiện tượng rồi giải thích bằng chứng. Nếu chưa chắc, hãy mở gợi ý từng nấc. Bạn có thể thử lại; điểm thưởng ghi nhận cả độ chính xác lẫn cách suy luận.", checks: ["Chọn bằng chứng quan sát", "Giải thích kết quả", "Mở khóa khu vực mới"] }
+    ];
+    function renderGuide() {
+      const step = guideContent[guideStep];
+      document.getElementById("guideProgress").innerHTML = guideContent.map((_, index) => `<span class="${index <= guideStep ? "done" : ""}"></span>`).join("");
+      document.getElementById("guideIcon").textContent = step.icon;
+      document.getElementById("guideKicker").textContent = `BOT LAB · HƯỚNG DẪN 0${guideStep + 1}`;
+      document.getElementById("guideTitle").textContent = step.title;
+      document.getElementById("guideCopy").textContent = step.copy;
+      document.getElementById("guideChecklist").innerHTML = step.checks.map(text => `<div class="guide-check"><span>✓</span>${escapeHTML(text)}</div>`).join("");
+      document.getElementById("guideCount").textContent = `Bước ${guideStep + 1} / ${guideContent.length}`;
+      document.getElementById("guideNext").innerHTML = guideStep === guideContent.length - 1 ? 'Vào bản đồ <span class="button-arrow">→</span>' : 'Tiếp theo <span class="button-arrow">→</span>';
+    }
+    function finishGuide() {
+      game.guideDone = true;
+      saveState();
+      navigate("mapScreen");
+    }
+
+    function openSettings() {
+      document.getElementById("settingsBackdrop").classList.add("open");
+      document.getElementById("soundSwitch").setAttribute("aria-checked", String(game.settings.sound));
+      document.getElementById("subtitleSwitch").setAttribute("aria-checked", String(game.settings.subtitles));
+      document.getElementById("qualitySelect").value = game.settings.quality;
+      document.getElementById("closeSettings").focus();
+    }
+    function closeSettings() {
+      document.getElementById("settingsBackdrop").classList.remove("open");
+      document.getElementById("openSettings").focus();
+    }
+    function setSceneQuality() {
+      if (renderer) renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, game.settings.quality === "low" ? 1 : 1.75));
+    }
+
+    function createExplorerAvatar(THREE) {
+      const avatar = new THREE.Group();
+      const material = (color, roughness = .62, metalness = 0) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
+      const coat = material(0xe8ece4);
+      const coatShade = material(0xb9c9c4);
+      const skin = material(0xe9a875);
+      const hair = material(0x743c26);
+      const hairLight = material(0xa85932);
+      const pants = material(0x795b3f);
+      const boots = material(0x4b3023, .48);
+      const teal = material(0x38bfb0, .35, .08);
+      const dark = material(0x18272d, .4);
+      const gold = material(0xe5b75e, .35, .28);
+      const blueLens = new THREE.MeshPhysicalMaterial({ color: 0x62d9dc, roughness: .12, metalness: .12, transparent: true, opacity: .8 });
+      const greenLens = new THREE.MeshPhysicalMaterial({ color: 0xa5df79, roughness: .12, metalness: .1, transparent: true, opacity: .8 });
+      const addMesh = (parent, geometry, surface, position, scale) => {
+        const mesh = new THREE.Mesh(geometry, surface);
+        mesh.position.set(position[0], position[1], position[2]);
+        if (scale) mesh.scale.set(scale[0], scale[1], scale[2]);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        parent.add(mesh);
+        return mesh;
+      };
+
+      addMesh(avatar, new THREE.CapsuleGeometry(.34, .58, 4, 8), coat, [0, 1.25, 0]);
+      addMesh(avatar, new THREE.CapsuleGeometry(.2, .5, 4, 8), teal, [0, 1.3, .29], [1, 1, .34]);
+      addMesh(avatar, new THREE.BoxGeometry(.09, .66, .14), coatShade, [-.23, 1.28, .27]);
+      addMesh(avatar, new THREE.BoxGeometry(.09, .66, .14), coatShade, [.23, 1.28, .27]);
+      addMesh(avatar, new THREE.BoxGeometry(.18, .16, .035), coatShade, [.23, 1.08, .36]);
+      addMesh(avatar, new THREE.BoxGeometry(.13, .11, .04), teal, [.23, 1.1, .385]);
+
+      const backpack = addMesh(avatar, new THREE.BoxGeometry(.56, .74, .28), material(0x71472e), [0, 1.5, -.34]);
+      backpack.rotation.x = -.06;
+      addMesh(avatar, new THREE.CylinderGeometry(.13, .13, .55, 12), gold, [-.22, 1.64, -.42]);
+      addMesh(avatar, new THREE.CylinderGeometry(.12, .12, .45, 12), teal, [.22, 1.58, -.42]);
+
+      const arms = [];
+      [-1, 1].forEach(side => {
+        const arm = new THREE.Group();
+        arm.position.set(side * .38, 1.62, 0);
+        avatar.add(arm);
+        addMesh(arm, new THREE.CapsuleGeometry(.13, .34, 3, 7), coat, [side * .04, -.24, 0]);
+        addMesh(arm, new THREE.CapsuleGeometry(.105, .31, 3, 7), skin, [side * .07, -.58, .04]);
+        addMesh(arm, new THREE.SphereGeometry(.115, 12, 10), skin, [side * .08, -.79, .1]);
+        if (side > 0) {
+          const sampleTube = addMesh(arm, new THREE.CylinderGeometry(.055, .07, .28, 12), teal, [.11, -.79, .16]);
+          sampleTube.rotation.z = -.25;
+          addMesh(arm, new THREE.CylinderGeometry(.061, .061, .045, 12), gold, [.11, -.63, .16]);
+        } else {
+          addMesh(arm, new THREE.BoxGeometry(.24, .12, .08), gold, [-.07, -.57, .08]);
+        }
+        arms.push(arm);
+      });
+
+      [-1, 1].forEach(side => {
+        const leg = addMesh(avatar, new THREE.CapsuleGeometry(.14, .43, 4, 8), pants, [side * .2, .56, 0]);
+        leg.rotation.z = side * -.04;
+        addMesh(avatar, new THREE.CapsuleGeometry(.15, .25, 4, 8), boots, [side * .2, .19, .09]);
+        addMesh(avatar, new THREE.BoxGeometry(.3, .12, .43), boots, [side * .2, .12, .16]);
+      });
+
+      addMesh(avatar, new THREE.CylinderGeometry(.12, .13, .19, 16), skin, [0, 1.82, 0]);
+      addMesh(avatar, new THREE.SphereGeometry(.36, 24, 18), skin, [0, 2.12, .015], [1, 1.06, .9]);
+      addMesh(avatar, new THREE.SphereGeometry(.36, 18, 12), hair, [0, 2.36, -.02], [1.12, .48, 1.02]);
+      [-.26, -.12, .04, .2, .31].forEach((x, index) => {
+        const spike = addMesh(avatar, new THREE.ConeGeometry(.12, .3 + (index % 2) * .1, 6), index % 2 ? hairLight : hair, [x, 2.52 + (index % 2) * .035, .015]);
+        spike.rotation.z = x * -.9;
+      });
+      addMesh(avatar, new THREE.SphereGeometry(.095, 12, 10), skin, [-.36, 2.07, 0]);
+      addMesh(avatar, new THREE.SphereGeometry(.095, 12, 10), skin, [.36, 2.07, 0]);
+      [-.13, .13].forEach((x, index) => {
+        const lens = addMesh(avatar, new THREE.TorusGeometry(.14, .035, 8, 24), gold, [x, 2.24, .32]);
+        lens.scale.y = .88;
+        addMesh(avatar, new THREE.SphereGeometry(.105, 16, 12), index ? greenLens : blueLens, [x, 2.24, .33], [1, .9, .35]);
+        addMesh(avatar, new THREE.SphereGeometry(.038, 10, 8), dark, [x, 2.07, .34]);
+      });
+      addMesh(avatar, new THREE.SphereGeometry(.035, 10, 8), skin, [0, 1.99, .35]);
+      addMesh(avatar, new THREE.TorusGeometry(.075, .012, 6, 16, Math.PI), hair, [0, 1.96, .346]);
+
+      const shadow = addMesh(avatar, new THREE.CircleGeometry(.56, 32), new THREE.MeshBasicMaterial({ color: 0x031016, transparent: true, opacity: .42, depthWrite: false }), [0, .055, 0]);
+      shadow.rotation.x = -Math.PI / 2;
+      avatar.position.set(-2.2, 0, .75);
+      avatar.scale.setScalar(.78);
+      scene.add(avatar);
+      avatarArms = arms;
+      explorerAvatar = avatar;
+      return avatar;
+    }
+
+    function updateExplorerMovement(delta, time) {
+      if (!explorerAvatar) return;
+      const direction = new threeApi.Vector2(
+        Number(movementKeys.has("d")) - Number(movementKeys.has("a")),
+        Number(movementKeys.has("s")) - Number(movementKeys.has("w"))
+      );
+      const isMoving = direction.lengthSq() > 0;
+      if (isMoving) {
+        direction.normalize();
+        explorerAvatar.position.x = threeApi.MathUtils.clamp(explorerAvatar.position.x + direction.x * delta * 2.7, -3.9, 3.9);
+        explorerAvatar.position.z = threeApi.MathUtils.clamp(explorerAvatar.position.z + direction.y * delta * 2.7, -3.9, 3.9);
+        explorerAvatar.rotation.y = Math.atan2(direction.x, direction.y);
+        explorerAvatar.position.y = Math.abs(Math.sin(time * 10)) * .035;
+      } else {
+        explorerAvatar.position.y = Math.sin(time * 1.8) * .012;
+      }
+      const pouring = performance.now() < avatarPourUntil;
+      avatarArms.forEach((arm, index) => {
+        const target = pouring && index === 1 ? -.95 : isMoving ? Math.sin(time * 9 + index * Math.PI) * .28 : 0;
+        arm.rotation.x += (target - arm.rotation.x) * Math.min(1, delta * 10);
+      });
+      if (performance.now() - lastInteractionRefresh > 180) {
+        lastInteractionRefresh = performance.now();
+        refreshInteractionUi();
+      }
+    }
+    function moveExplorerStep(key) {
+      if (!explorerAvatar) return;
+      const direction = {
+        w: [0, -1], a: [-1, 0], s: [0, 1], d: [1, 0]
+      }[key];
+      if (!direction) return;
+      explorerAvatar.position.x = threeApi.MathUtils.clamp(explorerAvatar.position.x + direction[0] * .38, -3.9, 3.9);
+      explorerAvatar.position.z = threeApi.MathUtils.clamp(explorerAvatar.position.z + direction[1] * .38, -3.9, 3.9);
+      if (direction[0] || direction[1]) explorerAvatar.rotation.y = Math.atan2(direction[0], direction[1]);
+      refreshInteractionUi();
+    }
+
+    async function initThree() {
+      if (threeInitStarted) return;
+      threeInitStarted = true;
+      try {
+        const THREE = await import("three");
+        const { OrbitControls } = await import("https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/controls/OrbitControls.js");
+        threeApi = THREE;
+        const canvas = document.getElementById("labCanvas");
+        if (!canvas) {
+          threeInitStarted = false;
+          return;
+        }
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: game.settings.quality !== "low", alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, game.settings.quality === "low" ? 1 : 1.75));
+        renderer.setClearColor(0x071720, 0);
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x071720, 8, 18);
+        camera = new THREE.PerspectiveCamera(38, 1, .1, 60);
+        camera.position.set(0, 2.5, 8.2);
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 1.55, 0);
+        controls.enableDamping = true;
+        controls.minDistance = 5;
+        controls.maxDistance = 11;
+        controls.maxPolarAngle = Math.PI * .83;
+        scene.add(new THREE.HemisphereLight(0xbde9e5, 0x10212d, 2));
+        const key = new THREE.DirectionalLight(0xc5fff7, 2.4);
+        key.position.set(-3, 7, 5);
+        scene.add(key);
+        const rim = new THREE.PointLight(0x55c9c4, 28, 12);
+        rim.position.set(3, 4, -2);
+        scene.add(rim);
+        const floor = new THREE.Mesh(new THREE.CircleGeometry(4.5, 64), new THREE.MeshStandardMaterial({ color: 0x102a35, roughness: .8, metalness: .12 }));
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = .02;
+        scene.add(floor);
+        const grid = new THREE.GridHelper(8, 18, 0x2d6871, 0x20444e);
+        grid.position.y = .035;
+        grid.material.transparent = true;
+        grid.material.opacity = .24;
+        scene.add(grid);
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(1.48, 1.57, .22, 56), new THREE.MeshStandardMaterial({ color: 0x253d47, metalness: .56, roughness: .3 }));
+        base.position.y = .16;
+        scene.add(base);
+        const baseTop = new THREE.Mesh(new THREE.CylinderGeometry(1.38, 1.38, .05, 56), new THREE.MeshStandardMaterial({ color: 0x61777a, metalness: .55, roughness: .26 }));
+        baseTop.position.y = .29;
+        scene.add(baseTop);
+        vessel = new THREE.Group();
+        scene.add(vessel);
+        const glass = new THREE.Mesh(new THREE.CylinderGeometry(.94, .72, 2.48, 48, 1, true), new THREE.MeshPhysicalMaterial({ color: 0xb5f4ed, transparent: true, opacity: .17, roughness: .08, metalness: .08, side: THREE.DoubleSide, depthWrite: false }));
+        glass.position.y = 1.62;
+        vessel.add(glass);
+        const glassBase = new THREE.Mesh(new THREE.CircleGeometry(.73, 48), new THREE.MeshPhysicalMaterial({ color: 0xa2e9e1, transparent: true, opacity: .28, side: THREE.DoubleSide }));
+        glassBase.rotation.x = -Math.PI / 2;
+        glassBase.position.y = .39;
+        vessel.add(glassBase);
+        const rimMesh = new THREE.Mesh(new THREE.TorusGeometry(.94, .035, 12, 56), new THREE.MeshStandardMaterial({ color: 0xa5e9e4, transparent: true, opacity: .68, metalness: .3, roughness: .2 }));
+        rimMesh.rotation.x = Math.PI / 2;
+        rimMesh.position.y = 2.87;
+        vessel.add(rimMesh);
+        const liquidGeometry = new THREE.CylinderGeometry(.9, .7, 1.22, 48, 1, false);
+        const liquidMaterial = new THREE.MeshPhysicalMaterial({ color: 0x27aab1, transparent: true, opacity: .47, roughness: .17, metalness: .08 });
+        liquid = new THREE.Mesh(liquidGeometry, liquidMaterial);
+        liquid.position.y = 1.04;
+        vessel.add(liquid);
+        const liquidSurface = new THREE.Mesh(new THREE.CircleGeometry(.89, 48), new THREE.MeshPhysicalMaterial({ color: 0x6adbd0, transparent: true, opacity: .28, side: THREE.DoubleSide }));
+        liquidSurface.rotation.x = -Math.PI / 2;
+        liquidSurface.position.y = 1.66;
+        vessel.add(liquidSurface);
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(.41, .5, .28, 40, 1, true), new THREE.MeshPhysicalMaterial({ color: 0xc3faf1, transparent: true, opacity: .18, side: THREE.DoubleSide }));
+        neck.position.y = 2.97;
+        vessel.add(neck);
+        const neckRim = new THREE.Mesh(new THREE.TorusGeometry(.42, .04, 12, 48), new THREE.MeshStandardMaterial({ color: 0xb3efeb, transparent: true, opacity: .7 }));
+        neckRim.rotation.x = Math.PI / 2;
+        neckRim.position.y = 3.11;
+        vessel.add(neckRim);
+        stationRing = new THREE.Mesh(
+          new THREE.TorusGeometry(1.82, .025, 8, 64),
+          new THREE.MeshBasicMaterial({ color: 0x67e0ce, transparent: true, opacity: .48 })
+        );
+        stationRing.rotation.x = -Math.PI / 2;
+        stationRing.position.y = .065;
+        scene.add(stationRing);
+        createExplorerAvatar(THREE);
+        addParticleCloud(THREE, 45, 0x76e8db, .018, .5, 1.6, "liquid");
+        window.addEventListener("resize", resizeScene);
+        const animate = () => {
+          requestAnimationFrame(animate);
+          if (!renderer || !scene || !camera) return;
+          const time = performance.now() * .001;
+          const now = performance.now();
+          const delta = lastAnimationTime ? Math.min((now - lastAnimationTime) / 1000, .05) : 0;
+          lastAnimationTime = now;
+          updateExplorerMovement(delta, time);
+          if (vessel) vessel.rotation.y = Math.sin(time * .35) * .07;
+          if (stationRing) stationRing.material.opacity = .3 + (Math.sin(time * 2.2) + 1) * .12;
+          particles.forEach(particle => {
+            if (particle.userData.kind === "bubble" && simulationMode === "reaction") {
+              const speed = catalystEnabled ? 1.4 : .34;
+              particle.position.y += particle.userData.speed * speed;
+              if (particle.position.y > 3.15) particle.position.y = .5 + Math.random() * .6;
+            } else if (particle.userData.kind === "precipitate" && simulationMode === "reaction") {
+              particle.position.y = Math.max(.43, particle.userData.targetY + Math.sin(time * 1.4 + particle.userData.phase) * .045);
+            } else if (particle.userData.kind === "liquid") {
+              particle.position.y += Math.sin(time + particle.userData.phase) * .00035;
+            }
+          });
+          controls?.update();
+          renderer.render(scene, camera);
+        };
+        animate();
+        resizeScene();
+        setSceneMode(simulationMode, activeLesson.id);
+        refreshInteractionUi();
+      } catch (error) {
+        threeInitStarted = false;
+        console.warn("Three.js không khả dụng; giữ nguyên giao diện mô phỏng dự phòng.", error);
+        const canvas = document.getElementById("labCanvas");
+        if (canvas) canvas.setAttribute("aria-label", "Mô phỏng hóa học minh họa; thư viện 3D không khả dụng trên thiết bị này.");
+      }
+    }
+    function addParticleCloud(THREE, count, color, size, minY, maxY, kind) {
+      const geometry = new THREE.SphereGeometry(size, 10, 8);
+      const material = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: .16, roughness: .24 });
+      const actualCount = game.settings.quality === "low" ? Math.ceil(count * .45) : count;
+      for (let index = 0; index < actualCount; index += 1) {
+        const particle = new THREE.Mesh(geometry, material);
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.sqrt(Math.random()) * .65;
+        particle.position.set(Math.cos(angle) * radius, minY + Math.random() * (maxY - minY), Math.sin(angle) * radius);
+        particle.userData = { kind, speed: .008 + Math.random() * .014, phase: Math.random() * 6, targetY: .44 + Math.random() * .26 };
+        particle.visible = kind === "liquid";
+        scene.add(particle);
+        particles.push(particle);
+      }
+    }
+    function clearReactionParticles() {
+      removeParticles(particle => particle.userData.kind !== "liquid");
+      particles.forEach(particle => { particle.visible = true; });
+    }
+    function removeParticles(shouldRemove) {
+      if (!scene) return;
+      const removed = particles.filter(shouldRemove);
+      particles = particles.filter(particle => !shouldRemove(particle));
+      const geometries = new Set();
+      const materials = new Set();
+      removed.forEach(particle => {
+        scene.remove(particle);
+        geometries.add(particle.geometry);
+        (Array.isArray(particle.material) ? particle.material : [particle.material]).forEach(material => materials.add(material));
+      });
+      geometries.forEach(geometry => geometry.dispose());
+      materials.forEach(material => material.dispose());
+    }
+    function setSceneMode(mode, lessonId) {
+      simulationMode = mode;
+      if (!threeApi || !scene || !liquid) return;
+      clearReactionParticles();
+      if (lessonId === 3) {
+        liquid.material.color.set(mode === "reaction" ? 0x38b9bb : 0x4b9ca4);
+        const sceneCaption = document.getElementById("sceneCaption");
+        if (sceneCaption) sceneCaption.textContent = mode === "reaction" ? (catalystEnabled ? "CÓ MnO₂ · NHANH HƠN" : "KHÔNG XÚC TÁC") : "SO SÁNH TỐC ĐỘ";
+        if (mode === "reaction") {
+          const bubbleCount = catalystEnabled ? (game.settings.quality === "low" ? 18 : 36) : (game.settings.quality === "low" ? 8 : 16);
+          const geometry = new threeApi.SphereGeometry(.035, 10, 8);
+          const material = new threeApi.MeshStandardMaterial({ color: 0xf3c778, emissive: 0x9e6025, emissiveIntensity: .28, transparent: true, opacity: .86 });
+          for (let index = 0; index < bubbleCount; index += 1) {
+            const bubble = new threeApi.Mesh(geometry, material);
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * .57;
+            bubble.position.set(Math.cos(angle) * radius, .52 + Math.random() * 1.2, Math.sin(angle) * radius);
+            bubble.userData = { kind: "bubble", speed: .008 + Math.random() * .018, phase: Math.random() * 5 };
+            scene.add(bubble);
+            particles.push(bubble);
+          }
+        }
+      } else {
+        liquid.material.color.set(lessonId === 4 ? 0x4c9eac : mode === "reaction" ? 0x66c8c0 : 0x399ca7);
+        if (mode === "reaction") {
+          const count = game.settings.quality === "low" ? 28 : 64;
+          const geometry = new threeApi.SphereGeometry(.035, 10, 8);
+          const material = new threeApi.MeshStandardMaterial({ color: 0xf5f2e7, roughness: .48, emissive: 0x74756e, emissiveIntensity: .07 });
+          for (let index = 0; index < count; index += 1) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.sqrt(Math.random()) * .54;
+            const particle = new threeApi.Mesh(geometry, material);
+            particle.position.set(Math.cos(angle) * radius, .42 + Math.random() * 1.1, Math.sin(angle) * radius);
+            particle.userData = { kind: "precipitate", phase: Math.random() * 5, targetY: .43 + Math.random() * .25 };
+            scene.add(particle);
+            particles.push(particle);
+          }
+        }
+      }
+    }
+    function resizeScene() {
+      if (!renderer || !camera) return;
+      const canvas = renderer.domElement;
+      const width = Math.max(1, canvas.clientWidth);
+      const height = Math.max(1, canvas.clientHeight);
+      if (canvas.width !== Math.floor(width * renderer.getPixelRatio()) || canvas.height !== Math.floor(height * renderer.getPixelRatio())) renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    }
+
+    document.getElementById("brandHome").addEventListener("click", event => { event.preventDefault(); navigate("homeScreen"); });
+    document.getElementById("startButton").addEventListener("click", () => {
+      const typedName = document.getElementById("playerName").value.trim();
+      if (typedName) game.name = typedName.slice(0, 24);
+      saveState();
+      if (!game.guideDone) {
+        guideStep = 0;
+        renderGuide();
+        navigate("guideScreen");
+      } else {
+        navigate("mapScreen");
+      }
+      playTone();
+    });
+    document.getElementById("continueButton").addEventListener("click", () => {
+      const typedName = document.getElementById("playerName").value.trim();
+      if (typedName) game.name = typedName.slice(0, 24);
+      saveState();
+      if (game.guideDone) navigate("mapScreen");
+      else { guideStep = 0; renderGuide(); navigate("guideScreen"); }
+    });
+    document.getElementById("guideNext").addEventListener("click", () => {
+      if (guideStep < guideContent.length - 1) {
+        guideStep += 1;
+        renderGuide();
+      } else finishGuide();
+      playTone();
+    });
+    document.getElementById("backToMap").addEventListener("click", () => navigate("mapScreen"));
+    document.getElementById("openSettings").addEventListener("click", openSettings);
+    document.getElementById("profileButton").addEventListener("click", () => {
+      navigate("homeScreen");
+      document.getElementById("playerName").focus();
+      showToast("Cập nhật tên nhà thám hiểm ở trang bắt đầu.");
+    });
+    document.getElementById("closeSettings").addEventListener("click", closeSettings);
+    document.getElementById("settingsBackdrop").addEventListener("click", event => { if (event.target.id === "settingsBackdrop") closeSettings(); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && document.getElementById("settingsBackdrop").classList.contains("open")) closeSettings(); });
+    document.getElementById("soundSwitch").addEventListener("click", event => {
+      game.settings.sound = !game.settings.sound;
+      event.currentTarget.setAttribute("aria-checked", String(game.settings.sound));
+      saveState();
+      playTone();
+    });
+    document.getElementById("subtitleSwitch").addEventListener("click", event => {
+      game.settings.subtitles = !game.settings.subtitles;
+      event.currentTarget.setAttribute("aria-checked", String(game.settings.subtitles));
+      document.getElementById("subtitleBar").hidden = !game.settings.subtitles;
+      saveState();
+    });
+    document.getElementById("qualitySelect").addEventListener("change", event => {
+      game.settings.quality = event.target.value;
+      setSceneQuality();
+      saveState();
+      if (threeApi && scene && activeLesson) {
+        clearReactionParticles();
+        removeParticles(particle => particle.userData.kind === "liquid");
+        addParticleCloud(threeApi, 45, 0x76e8db, .018, .5, 1.6, "liquid");
+        setSceneMode(simulationMode, activeLesson.id);
+      }
+      showToast(`Chất lượng mô phỏng: ${game.settings.quality === "low" ? "tiết kiệm" : "cao"}.`);
+    });
+    document.getElementById("resetProgress").addEventListener("click", () => {
+      if (!window.confirm("Xóa XP, huy hiệu và toàn bộ nhiệm vụ đã hoàn thành trên thiết bị này?")) return;
+      const settings = { ...game.settings };
+      game = { ...cloneValue(defaultState), settings };
+      try { localStorage.removeItem(storageKey); } catch (error) { console.warn("Không thể xóa tiến độ đã lưu.", error); }
+      saveState();
+      closeSettings();
+      navigate("homeScreen");
+      showToast("Tiến độ đã được đặt lại.");
+    });
+    document.addEventListener("click", event => {
+      if (event.target.closest("button.primary-button, button.soft-button, button.ghost-button, button.level-open")) playTone();
+    });
+    const keyDirections = {
+      w: "w", a: "a", s: "s", d: "d",
+      arrowup: "w", arrowleft: "a", arrowdown: "s", arrowright: "d"
+    };
+    window.addEventListener("keydown", event => {
+      if (!document.getElementById("labScreen").classList.contains("active")) return;
+      const key = event.key.toLowerCase();
+      if (key === "e") {
+        event.preventDefault();
+        if (!event.repeat) interactWithLab();
+        return;
+      }
+      const focusedRadio = event.target instanceof HTMLInputElement && event.target.type === "radio";
+      if (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, [contenteditable='true']")
+        && !(focusedRadio && ["w", "a", "s", "d"].includes(key))) return;
+      if (keyDirections[key]) {
+        event.preventDefault();
+        movementKeys.add(keyDirections[key]);
+      }
+    });
+    window.addEventListener("keyup", event => {
+      const direction = keyDirections[event.key.toLowerCase()];
+      if (direction) movementKeys.delete(direction);
+    });
+    window.addEventListener("blur", () => movementKeys.clear());
+
+    updateHeader();
+  </script>
+</body>
+</html>
